@@ -21,6 +21,9 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private float movementSpeed = 5.0f;
 
+    public float drawSpeed = 0.5f;
+    public bool euclideanHeuristic = true;
+
     public System.Action<Vector2Int> DestinationChanged;
 
     public Maze Maze => maze;
@@ -134,5 +137,15 @@ public class GameManager : MonoBehaviour
                 DestinationTile = destTile;
             }
         }
+    }
+
+    public void switchHeuristic()
+    {
+        euclideanHeuristic = !euclideanHeuristic;
+    }
+
+    public void SetDrawSpeed(float speed)
+    {
+        drawSpeed = speed;
     }
 }

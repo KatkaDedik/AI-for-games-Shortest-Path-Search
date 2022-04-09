@@ -26,6 +26,9 @@ public class Agent : MonoBehaviour
     protected bool isInitialized = false;
     private Vector2Int lastGoal;
     List<Vector2Int> path;
+    public bool UseEuclideanHeuristic = true;
+    private bool move = false;
+    private int pathIndex = 0;
 
     protected virtual void Start()
     {
@@ -55,22 +58,24 @@ public class Agent : MonoBehaviour
             lastGoal = GameManager.Instance.DestinationTile;
             StopAllCoroutines();
             parentMaze.ResetTileColors();
-
             StartCoroutine(CalculatePath(CurrentTile, lastGoal));
-            
+            pathIndex = 0;
         }
 
         var destWorld = parentMaze.GetWorldPositionForMazeTile(GameManager.Instance.DestinationTile);
-        
-        /*if(destWorld.x > transform.position.x && parentMaze.IsValidTileOfType(new Vector2Int(CurrentTile.x + 1, CurrentTile.y), MazeTileType.Free))
-        {
-            transform.Translate(Vector3.right * movementSpeed * Time.deltaTime);
-        } 
-        else if(destWorld.x < transform.position.x && parentMaze.IsValidTileOfType(new Vector2Int(CurrentTile.x - 1, CurrentTile.y), MazeTileType.Free))
-        {
-            transform.Translate(-Vector3.right * movementSpeed * Time.deltaTime);
-        }*/
 
+        if (move)
+        {
+            
+            if (MoveCharacter(path[pathIndex]))
+            {
+                pathIndex++;
+            }
+            if (pathIndex >= path.Count)
+            {
+                move = false;
+            }
+        }
         var oldTile = CurrentTile;
         // Notice on the player's behavior that using this approach, a new tile is computed for a player
         // as soon as his origin crosses the tile border. Therefore, the player now often stops somehow "in the middle".
@@ -90,8 +95,16 @@ public class Agent : MonoBehaviour
         }
     }
 
+    private bool MoveCharacter(Vector2Int nextPos)
+    {
+        Vector3 direction = (parentMaze.GetWorldPositionForMazeTile(nextPos) - transform.position).normalized;
+        transform.Translate(direction * movementSpeed * Time.deltaTime);
+        return ((parentMaze.GetWorldPositionForMazeTile(nextPos) - transform.position).magnitude <= 0.1f);
+    }
+
     private IEnumerator CalculatePath(Vector2Int start, Vector2Int goal)
     {
+        move = false;
         List<Vector2Int> closedSet = new List<Vector2Int>();
         SimplePriorityQueue<Vector2Int> openSet = new SimplePriorityQueue<Vector2Int>();
 
@@ -115,16 +128,16 @@ public class Agent : MonoBehaviour
             parentMaze.SetFreeTileColor(current, Color.red);
             current = openSet.Dequeue();
             parentMaze.SetFreeTileColor(current, Color.blue);
-            yield return new WaitForEndOfFrame();
+            yield return new WaitForSeconds(GameManager.Instance.drawSpeed);
             if (current == goal)
             {
-                StartCoroutine(ReconstructPath(cameFrom, current, start));
+                path = ReconstructPath(cameFrom, current, start);
                 break;
             }
             closedSet.Add(current);
             foreach(Vector2Int neighbor in parentMaze.GetNeighbors(current.y, current.x))
             {
-                if (closedSet.Contains(neighbor))
+                if (closedSet.Contains(neighbor) || openSet.Contains(neighbor))
                 {
                     continue;
                 }
@@ -141,12 +154,11 @@ public class Agent : MonoBehaviour
                 cameFrom[neighbor] = current;
                 gScore[neighbor] = tentative_gScore;
                 openSet.UpdatePriority(neighbor, gScore[neighbor] + Heuristic(neighbor, goal));
-                yield return new WaitForEndOfFrame();
             }
         }
     }
 
-    private IEnumerator ReconstructPath(Dictionary<Vector2Int, Vector2Int> cameFrom, Vector2Int current, Vector2 start)
+    private List<Vector2Int> ReconstructPath(Dictionary<Vector2Int, Vector2Int> cameFrom, Vector2Int current, Vector2 start)
     {
         List<Vector2Int> total_path = new List<Vector2Int>();
         total_path.Add(current);
@@ -156,15 +168,16 @@ public class Agent : MonoBehaviour
             {
                 if(wp == current)
                 {
-                    yield return new WaitForSeconds(0.1f);
+                    
                     current = cameFrom[wp];
                     total_path.Add(current);
-                    parentMaze.SetFreeTileColor(current, Color.green);
+                    parentMaze.SetFreeTileColor(current, Color.blue);
                 }
             }
         }
         total_path.Reverse();
-        path = total_path;
+        move = true;
+        return total_path;
     }
 
 
@@ -178,8 +191,13 @@ public class Agent : MonoBehaviour
     }
 
     private float Heuristic(Vector2Int p1, Vector2Int p2)
-    {
-        return Vector3.Distance(parentMaze.GetWorldPositionForMazeTile(p1), parentMaze.GetWorldPositionForMazeTile(p2));
+    {   
+        if (GameManager.Instance.euclideanHeuristic)
+        {
+            return Vector3.Distance(parentMaze.GetWorldPositionForMazeTile(p1), parentMaze.GetWorldPositionForMazeTile(p2));
+
+        }
+        return 1;
     }
 
     // This function is called every time the user sets a new destination using a left mouse button
