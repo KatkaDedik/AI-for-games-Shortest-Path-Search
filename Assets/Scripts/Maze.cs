@@ -8,6 +8,7 @@ public enum MazeTileType : byte
     Free
 }
 
+
 public class Maze : MonoBehaviour
 {
     [Header("General settings")]
@@ -54,6 +55,62 @@ public class Maze : MonoBehaviour
     private void Awake()
     {
         VerifyPrefabs();
+    }
+
+    public List<Vector2Int> GetNeighbors(int row, int col)
+    {
+        List<Vector2Int> neighbors = new List<Vector2Int>();
+
+        int flags = 0;
+
+        Debug.Log($"neighbors for tyle : row {row}   col {col} ");
+
+        if (MazeTiles[row + 1][col] == MazeTileType.Free)
+        {
+            neighbors.Add(new Vector2Int(col, row + 1));
+            flags += 1;
+            Debug.Log($"row {row + 1}   col {col} ");
+        }
+        if (MazeTiles[row][col + 1] == MazeTileType.Free)
+        {
+            neighbors.Add(new Vector2Int(col + 1, row));
+            flags += 2;
+            Debug.Log($"row {row}   col {col + 1} ");
+        }
+        if (MazeTiles[row - 1][col] == MazeTileType.Free)
+        {
+            neighbors.Add(new Vector2Int(col, row - 1));
+            flags += 4;
+            Debug.Log($"row {row - 1}   col {col} ");
+        }
+        if (MazeTiles[row][col - 1] == MazeTileType.Free)
+        {
+            neighbors.Add(new Vector2Int(col - 1, row));
+            Debug.Log($"row {row }   col {col- 1} ");
+            flags += 8;
+        }
+
+        if(MazeTiles[row + 1][col - 1] == MazeTileType.Free && ((flags & 9) == 9))
+        {
+            neighbors.Add(new Vector2Int(col - 1,row + 1));
+        }
+
+        if (MazeTiles[row + 1][col + 1] == MazeTileType.Free && ((flags & 3) == 3))
+        {
+            neighbors.Add(new Vector2Int(col + 1, row + 1));
+        }
+
+        if (MazeTiles[row - 1][col + 1] == MazeTileType.Free && ((flags & 6) == 6))
+        {
+            neighbors.Add(new Vector2Int(col + 1, row - 1));
+        }
+
+        if (MazeTiles[row - 1][col - 1] == MazeTileType.Free && ((flags & 12) == 12))
+        {
+            neighbors.Add(new Vector2Int(col - 1, row - 1));
+        }
+
+        return neighbors;
     }
 
     public Vector3 GetWorldPositionForMazeTile(int x, int y)
